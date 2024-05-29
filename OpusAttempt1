@@ -1,0 +1,44 @@
+```vb
+Sub ExtractResponses()
+    Dim wdApp As Word.Application
+    Dim wdDoc As Word.Document
+    Dim xlSheet As Worksheet
+    Dim folderPath As String
+    Dim fileName As String
+    Dim i As Long, j As Long
+    
+    folderPath = "C:\Path\To\Your\Documents\"
+    Set xlSheet = ThisWorkbook.Sheets("Sheet1")
+    
+    For i = 1 To 100
+        fileName = "Document" & i & ".docx"
+        Set wdApp = New Word.Application
+        Set wdDoc = wdApp.Documents.Open(folderPath & fileName)
+        
+        For j = 1 To 50
+            xlSheet.Cells(i + 1, j).Value = ExtractResponse(wdDoc, j)
+        Next j
+        
+        wdDoc.Close SaveChanges:=False
+        wdApp.Quit
+    Next i
+    
+    Set wdDoc = Nothing
+    Set wdApp = Nothing
+End Sub
+
+Function ExtractResponse(wdDoc As Word.Document, questionNum As Long) As String
+    Dim rng As Word.Range
+    Dim startPos As Long, endPos As Long
+    
+    Set rng = wdDoc.Content
+    startPos = InStr(rng.Text, questionNum & ". ")
+    If startPos > 0 Then
+        startPos = startPos + Len(questionNum & ". ")
+        endPos = InStr(startPos, rng.Text, "?") + 1
+        If endPos > startPos Then
+            ExtractResponse = Trim(Mid(rng.Text, startPos, endPos - startPos))
+        End If
+    End If
+End Function
+```​​​​​​​​​​​​​​​​
