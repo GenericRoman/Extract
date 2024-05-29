@@ -1,0 +1,94 @@
+Sub ExtractAndCollateData()
+    ' Top level: 0 indents
+    Dim folderPath As String
+    Dim fileName As String
+    Dim doc As Document
+    Dim collatedData As Object
+    Dim para As Paragraph
+    Dim question As String
+    Dim answer As String
+    Dim row As Long
+    
+    ' Set the folder path containing the Word documents
+    folderPath = "C:\path_to_your_folder\"
+    
+    ' Initialize a new Dictionary to hold collated data
+    Set collatedData = CreateObject("Scripting.Dictionary")
+    
+    ' Loop through all .docx files in the folder
+    fileName = Dir(folderPath & "*.docx")
+    Do While fileName <> ""
+        ' One indent level
+        Set doc = Documents.Open(folderPath & fileName)
+        
+        question = ""
+        answer = ""
+        
+        ' Loop through all paragraphs in the document
+        For Each para In doc.Paragraphs
+            ' Two indent levels
+            ' Check if paragraph ends with a question mark (indicative of a question)
+            If Right(para.Range.Text, 1) = "?" Then
+                question = Trim(para.Range.Text)
+                answer = ""
+            Else
+                ' Three indent levels
+                ' Check if paragraph is a tickbox answer or text answer
+                If Left(Trim(para.Range.Text), 1) = "[" Or Len(Trim(para.Range.Text)) > 0 Then
+                    answer = Trim(para.Range.Text)
+                    ' Store the question and answer in the dictionary
+                    If Not collatedData.Exists(question) Then
+                        ' Four indent levels
+                        Set collatedData(question) = New Collection
+                    End If
+                    collatedData(question).Add answer
+                End If
+            End If
+        Next para
+        
+        doc.Close False
+        fileName = Dir
+    Loop
+    
+    ' Create a new Excel workbook to store the collated data
+    Dim xlApp As Object
+    Dim xlBook As Object
+    Dim xlSheet As Object
+    Set xlApp = CreateObject("Excel.Application")
+    xlApp.Visible = True
+    Set xlBook = xlApp.Workbooks.Add
+    Set xlSheet = xlBook.Worksheets(1)
+    
+    ' Write collated data to the Excel sheet
+    xlSheet.Cells(1, 1).Value = "Question"
+    xlSheet.Cells(1, 2).Value = "Answer"
+    row = 2
+    
+    Dim key As Variant
+    Dim answerCollection As Collection
+    Dim answerItem As Variant
+    
+    For Each key In collatedData.Keys
+        ' One indent level
+        Set answerCollection = collatedData(key)
+        For Each answerItem In answerCollection
+            ' Two indent levels
+            xlSheet.Cells(row, 1).Value = key
+            xlSheet.Cells(row, 2).Value = answerItem
+            row = row + 1
+        Next answerItem
+    Next key
+    
+    ' Save the workbook
+    xlBook.SaveAs folderPath & "collated_data.xlsx"
+    xlBook.Close False
+    xlApp.Quit
+    
+    ' Clean up
+    Set xlSheet = Nothing
+    Set xlBook = Nothing
+    Set xlApp = Nothing
+    Set collatedData = Nothing
+    
+    MsgBox "Data collation complete. Check 'collated_data.xlsx' in the specified folder.", vbInformation
+End Sub
