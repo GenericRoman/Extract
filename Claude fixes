@@ -1,0 +1,62 @@
+ Sub ExtractAndCollateData()
+    Dim folderPath As String
+    Dim fileName As String
+    Dim doc As Document
+    Dim collatedData As Object
+    Dim para As Paragraph
+    Dim question As String
+    Dim answer As String
+    Dim currentRow As Long
+    Dim currentCol As Long
+    
+    ' Set the folder path containing the Word documents
+    folderPath = "C:\path_to_your_folder\"
+    
+    ' Initialize a new Dictionary to hold collated data
+    Set collatedData = CreateObject("Scripting.Dictionary")
+    
+    ' Loop through all .docx files in the folder
+    fileName = Dir(folderPath & "*.docx")
+    Do While fileName <> ""
+        Set doc = Documents.Open(folderPath & fileName)
+        
+        question = ""
+        answer = ""
+        
+        ' Loop through all paragraphs in the document
+        For Each para In doc.Paragraphs
+            ' Check if paragraph ends with a question mark (indicative of a question)
+            If Right(Trim(para.Range.Text), 1) = "?" Then
+                If question <> "" And answer <> "" Then
+                    ' Store the previous question and answer in the dictionary
+                    If Not collatedData.Exists(question) Then
+                        Set collatedData(question) = CreateObject("Scripting.Dictionary")
+                    End If
+                    ' Create a new entry for this document in the dictionary for the current question
+                    collatedData(question)(fileName) = answer
+                    answer = ""
+                End If
+                question = Trim(para.Range.Text)
+            Else
+                ' Check if paragraph is a tickbox answer or text answer
+                If Left(Trim(para.Range.Text), 1) = "[" Or Len(Trim(para.Range.Text)) > 0 Then
+                    answer = answer & vbNewLine & Trim(para.Range.Text)
+                End If
+            End If
+        Next para
+        
+        ' Store the last question and answer in the dictionary
+        If question <> "" And answer <> "" Then
+            If Not collatedData.Exists(question) Then
+                Set collatedData(question) = CreateObject("Scripting.Dictionary")
+            End If
+            collatedData(question)(fileName) = answer
+        End If
+        
+        doc.Close False
+        fileName = Dir
+    Loop
+    
+    ' Rest of the code remains the same...
+End Sub
+
