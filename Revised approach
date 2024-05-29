@@ -1,0 +1,100 @@
+Sub ExtractAndCollateData()
+    Dim folderPath As String
+    Dim fileName As String
+    Dim doc As Document
+    Dim collatedData As Object
+    Dim para As Paragraph
+    Dim question As String
+    Dim answer As String
+    Dim currentRow As Long
+    Dim currentCol As Long
+    
+    ' Set the folder path containing the Word documents
+    folderPath = "C:\path_to_your_folder\"
+    
+    ' Initialize a new Dictionary to hold collated data
+    Set collatedData = CreateObject("Scripting.Dictionary")
+    
+    ' Loop through all .docx files in the folder
+    fileName = Dir(folderPath & "*.docx")
+    Do While fileName <> ""
+        Set doc = Documents.Open(folderPath & fileName)
+        
+        question = ""
+        answer = ""
+        
+        ' Loop through all paragraphs in the document
+        For Each para In doc.Paragraphs
+            ' Check if paragraph ends with a question mark (indicative of a question)
+            If Right(para.Range.Text, 1) = "?" Then
+                question = Trim(para.Range.Text)
+            Else
+                ' Check if paragraph is a tickbox answer or text answer
+                If Left(Trim(para.Range.Text), 1) = "[" Or Len(Trim(para.Range.Text)) > 0 Then
+                    answer = Trim(para.Range.Text)
+                    ' Store the question and answer in the dictionary
+                    If Not collatedData.Exists(question) Then
+                        Set collatedData(question) = CreateObject("Scripting.Dictionary")
+                    End If
+                    ' Create a new entry for this document in the dictionary for the current question
+                    collatedData(question)(fileName) = answer
+                End If
+            End If
+        Next para
+        
+        doc.Close False
+        fileName = Dir
+    Loop
+    
+    ' Create a new Excel workbook to store the collated data
+    Dim xlApp As Object
+    Dim xlBook As Object
+    Dim xlSheet As Object
+    Set xlApp = CreateObject("Excel.Application")
+    xlApp.Visible = True
+    Set xlBook = xlApp.Workbooks.Add
+    Set xlSheet = xlBook.Worksheets(1)
+    
+    ' Write collated data to the Excel sheet
+    currentRow = 1
+    currentCol = 2 ' Start writing questions from the second column
+    
+    ' Write question headers
+    Dim key As Variant
+    Dim subKey As Variant
+    For Each key In collatedData.Keys
+        xlSheet.Cells(1, currentCol).Value = key
+        currentCol = currentCol + 1
+    Next key
+    
+    ' Write answers for each document
+    fileName = Dir(folderPath & "*.docx")
+    currentRow = 2
+    Do While fileName <> ""
+        xlSheet.Cells(currentRow, 1).Value = fileName ' Write the document name in the first column
+        currentCol = 2
+        For Each key In collatedData.Keys
+            If collatedData(key).Exists(fileName) Then
+                xlSheet.Cells(currentRow, currentCol).Value = collatedData(key)(fileName)
+            Else
+                xlSheet.Cells(currentRow, currentCol).Value = ""
+            End If
+            currentCol = currentCol + 1
+        Next key
+        currentRow = currentRow + 1
+        fileName = Dir
+    Loop
+    
+    ' Save the workbook
+    xlBook.SaveAs folderPath & "collated_data.xlsx"
+    xlBook.Close False
+    xlApp.Quit
+    
+    ' Clean up
+    Set xlSheet = Nothing
+    Set xlBook = Nothing
+    Set xlApp = Nothing
+    Set collatedData = Nothing
+    
+    MsgBox "Data collation complete. Check 'collated_data.xlsx' in the specified folder.", vbInformation
+End Sub
