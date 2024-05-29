@@ -1,0 +1,76 @@
+Sub ExtractWordDataToExcel()
+    Dim wdApp As Object
+    Dim wdDoc As Object
+    Dim wdFile As Object
+    Dim folderPath As String
+    Dim fileName As String
+    Dim i As Integer
+    Dim j As Integer
+    Dim ws As Worksheet
+    Dim colHeaders As Collection
+    
+    ' Set folder path where the Word documents are stored
+    folderPath = "C:\Path\To\Your\Word\Documents\"
+    
+    ' Initialize Word application
+    On Error Resume Next
+    Set wdApp = GetObject(Class:="Word.Application")
+    If wdApp Is Nothing Then
+        Set wdApp = CreateObject(Class:="Word.Application")
+    End If
+    On Error GoTo 0
+    
+    ' Create a new worksheet
+    Set ws = ThisWorkbook.Sheets.Add
+    ws.Name = "Consultation Data"
+    
+    ' Initialize collection for column headers
+    Set colHeaders = New Collection
+    
+    ' Get the list of files in the folder
+    fileName = Dir(folderPath & "*.docx")
+    i = 2 ' Start from row 2 to leave room for headers
+    
+    Do While fileName <> ""
+        Set wdDoc = wdApp.Documents.Open(folderPath & fileName)
+        
+        ' Extract data from the document
+        Dim answer As String
+        j = 1 ' Column index
+        
+        For Each wdFile In wdDoc.FormFields
+            ' Add headers if not already added
+            On Error Resume Next
+            colHeaders.Add wdFile.Name, wdFile.Name
+            If Err.Number = 0 Then
+                ws.Cells(1, j).Value = wdFile.Name
+                j = j + 1
+            End If
+            On Error GoTo 0
+        Next wdFile
+        
+        ' Reset column index for answers
+        j = 1
+        For Each wdFile In wdDoc.FormFields
+            If wdFile.Type = 70 Then ' Check for text box
+                answer = wdFile.Result
+            ElseIf wdFile.Type = 71 Then ' Check for checkbox
+                If wdFile.CheckBox.Value = True Then
+                    answer = "Yes"
+                Else
+                    answer = "No"
+                End If
+            End If
+            ws.Cells(i, j).Value = answer
+            j = j + 1
+        Next wdFile
+        
+        wdDoc.Close SaveChanges:=False
+        fileName = Dir
+        i = i + 1
+    Loop
+    
+    ' Close Word application
+    wdApp.Quit
+    Set wdApp = Nothing
+End Sub
