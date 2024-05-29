@@ -1,0 +1,29 @@
+```vb
+Sub RenameDocuments()
+    Dim folderPath As String
+    Dim fileName As String
+    Dim fileNum As Long
+    Dim fso As Object
+    Dim folder As Object
+    Dim file As Object
+    
+    folderPath = "C:\Path\To\Your\Documents\"
+    
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    Set folder = fso.GetFolder(folderPath)
+    
+    fileNum = 1
+    
+    For Each file In folder.Files
+        If LCase(Right(file.Name, 5)) = ".docx" Then
+            fileName = "Document" & fileNum & ".docx"
+            file.Name = fileName
+            fileNum = fileNum + 1
+        End If
+    Next file
+    
+    Set file = Nothing
+    Set folder = Nothing
+    Set fso = Nothing
+End Sub
+```​​​​​​​​​​​​​​​​
